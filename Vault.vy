@@ -2,6 +2,7 @@
 """
 @title Vault
 @notice Holds ETH deposits per account. An owner can pause new deposits.
+@dev Withdrawals stay open while deposits are paused.
 """
 
 owner: public(address)
