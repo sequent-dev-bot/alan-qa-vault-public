@@ -43,3 +43,12 @@ def transfer_ownership(new_owner: address):
     assert msg.sender == self.owner, "not owner"
     assert new_owner != empty(address), "zero owner"
     self.owner = new_owner
+
+
+@external
+@view
+def is_owner(account: address) -> bool:
+    """
+    @notice Whether `account` is the current owner.
+    """
+    return account == self.owner
