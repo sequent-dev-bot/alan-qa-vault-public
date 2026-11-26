@@ -1,0 +1,38 @@
+name: Alan verification
+on:
+  push:
+    branches: ["main"]
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify specifications and proofs
+        env:
+          PROJECT: https://pr-2792.preview.sequent.inc/api/projects/4304b794-f49f-40d8-b66a-d4b9a6bbaf6d
+          AUTH: "Authorization: Bearer ${{ secrets.ALAN_PROJECT_TOKEN }}"
+          # A push verifies its own commit; a newer push supersedes it. Other runs verify the branch tip.
+          BODY: ${{ github.event_name == 'push' && format('{{"commitSha":"{0}"}}', github.sha) || '{}' }}
+        run: |
+          # Another verification of the project is running: wait for it to finish.
+          while code=$(curl -sS --retry 5 --retry-all-errors -o start.json -w '%{http_code}' -X POST -H "$AUTH" \
+              -H 'Content-Type: application/json' -d "$BODY" "$PROJECT/verifications") &&
+              [ "$code" = 409 ] && grep -q verification_active start.json; do
+            sleep 60
+          done
+          cat start.json; echo
+          [ "$code" = 200 ] || exit 1
+          [ "$(jq -r .status start.json)" = superseded ] && exit 0
+          sha=$(jq -r .commitSha start.json)
+          while :; do
+            curl -sSf --retry 5 --retry-all-errors -H "$AUTH" "$PROJECT/verifications/latest" -o latest.json
+            jq -e .latest latest.json >/dev/null || exit 1
+            [ "$(jq -r .latest.commitSha latest.json)" = "$sha" ] || { echo "A newer commit is being verified."; exit 0; }
+            status=$(jq -r .latest.status latest.json)
+            [ "$status" = running ] || break
+            sleep 60
+          done
+          jq .latest latest.json
+          [ "$status" = verified ]
