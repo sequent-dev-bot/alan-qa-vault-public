@@ -15,20 +15,31 @@ def __init__():
     self.owner = msg.sender
 
 
+@internal
+def _credit(account: address, amount: uint256):
+    self.balances[account] += amount
+    self.total_deposits += amount
+
+
+@internal
+def _debit(account: address, amount: uint256):
+    balance: uint256 = self.balances[account]
+    assert balance >= amount, "insufficient balance"
+    self.balances[account] = balance - amount
+    self.total_deposits -= amount
+
+
 @external
 @payable
 def deposit():
     assert not self.paused, "paused"
     assert msg.value > 0, "zero deposit"
-    self.balances[msg.sender] += msg.value
-    self.total_deposits += msg.value
+    self._credit(msg.sender, msg.value)
 
 
 @external
 def withdraw(amount: uint256):
-    assert self.balances[msg.sender] >= amount, "insufficient balance"
-    self.balances[msg.sender] -= amount
-    self.total_deposits -= amount
+    self._debit(msg.sender, amount)
     send(msg.sender, amount)
 
 
