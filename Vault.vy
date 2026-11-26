@@ -44,7 +44,7 @@ def withdraw(amount: uint256):
 
 
 @external
-def set_paused(flag: bool):
+def set_deposits_paused(flag: bool):
     assert msg.sender == self.owner, "not owner"
     self.paused = flag
 
